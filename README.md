@@ -1,10 +1,24 @@
 # The cfgmdl package
 
-## Set-up and testing
-From bash
+## Set-up
+
+From bash using pip
 ```
-$ source <cfgmdl install directory>/setup/setup.sh
-$ nosetests <cfgmdl install directory>
+$ pip install cfgmdl
+```
+
+From source
+```
+git clone https://github.com/KIPAC/cfgmdl.git
+cd cfgmdl
+python setup.py install (or python setup.py develop)
+```
+
+## Testing
+
+```
+$ pip install pytest
+$ pytest cfgmdl
 ```
 
 ## Demo
