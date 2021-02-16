@@ -1,0 +1,10 @@
+# .coveragerc to control coverage.py
+[run]
+omit=
+  *cfgmdl/_version.py
+  *cfgmdl/version.py
+
+
+[html]
+directory = htmlcov
+
