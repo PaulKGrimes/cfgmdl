@@ -1,10 +1,10 @@
 from setuptools import setup
 
-from python.bolo import version
+from python.cfgmdl.version import get_git_version
 
 setup(
     name="cfgmdl",
-    version=version.get_git_version(),
+    version=get_git_version(),
     author="",
     author_email="",
     url = "https://github.com/KIPAC/cfgmdl",
