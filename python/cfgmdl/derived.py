@@ -46,7 +46,7 @@ class Derived(Property):
             return val
 
         try:
-            loader = self.loader
+            loader = self.loader  #pylint: disable=no-member
         except KeyError as err: #pragma: no cover
             raise AttributeError("Loader is not defined") from err
 

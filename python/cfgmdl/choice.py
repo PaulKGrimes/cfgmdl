@@ -32,5 +32,5 @@ class Choice(Property):
 
         In this case it checks that value is in the set of allowed choices
         """
-        if value not in self.choices:
-            raise ValueError("%s not allow, options are %s" % (value, self.choices))
+        if value not in self.choices: #pylint: disable=no-member
+            raise ValueError("%s not allow, options are %s" % (value, self.choices))  #pylint: disable=no-member

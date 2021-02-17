@@ -22,6 +22,6 @@ setup(
         "Operating System :: OS Independent",
         "Programming Language :: Python",
         ],
-    install_requires=["numpy", "jax", "jaxlib"],
+    install_requires=["numpy", "jax", "jaxlib", "pyyaml"],
     python_requires='>=3.7',
 )

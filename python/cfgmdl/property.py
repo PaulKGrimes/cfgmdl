@@ -67,7 +67,7 @@ class Property:
         ValueError : The input value failes validation for a Property sub-class (e.g., not a valid choice, or outside bounds)
         """
         try:
-            cast_value = cast_type(self.dtype, value)
+            cast_value = cast_type(self.dtype, value)  #pylint: disable=no-member
             self.validate_value(cast_value)
         except (TypeError, ValueError) as msg:
             setattr(obj, self.private_name, None)
@@ -90,7 +90,7 @@ class Property:
         try:
             return getattr(obj, self.private_name)
         except AttributeError:
-            setattr(obj, self.private_name, self.default)
+            setattr(obj, self.private_name, self.default)  #pylint: disable=no-member
         return getattr(obj, self.private_name)
 
     def __delete__(self, obj):
@@ -99,7 +99,7 @@ class Property:
         This can be useful for sub-classes that use None
         to indicate an un-initialized value.
         """
-        setattr(obj, self.private_name, self.default)
+        setattr(obj, self.private_name, self.default)  #pylint: disable=no-member
 
     def _load(self, **kwargs):
         """Load kwargs key,value pairs into __dict__
@@ -116,7 +116,7 @@ class Property:
         self.__dict__.update(defaults)
 
         # Make sure the default is valid
-        _ = cast_type(self.dtype, self.default)
+        _ = cast_type(self.dtype, self.default)  #pylint: disable=no-member
 
     @classmethod
     def defaults_docstring(cls, header=None, indent=None, footer=None):

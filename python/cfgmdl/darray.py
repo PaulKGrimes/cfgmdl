@@ -28,7 +28,7 @@ class Darray(np.ndarray):
 
         It also triggers a call to Darray.__array_finalize__
         """
-        obj = np.asarray(value).view(cls)        
+        obj = np.asarray(value).view(cls)
         # Finally, we must return the newly created object:
         for key, val in cls.defaults.items():
             kwval = kwds.pop(key, val)

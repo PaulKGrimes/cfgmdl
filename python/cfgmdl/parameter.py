@@ -72,7 +72,7 @@ class Parameter(Property):
             val_dict.update(dict(value=value))
 
         try:
-            cast_value = self.dtype(**val_dict)
+            cast_value = self.dtype(**val_dict)  #pylint: disable=no-member
             self.validate_value(cast_value)
         except (TypeError, ValueError) as msg:
             setattr(obj, self.private_name, None)

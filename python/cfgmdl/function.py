@@ -183,7 +183,7 @@ class Function:
         if not aa.nd:
             return np.expand_dims(arrays_in, 0)
         return aa
-        
+
     def grad(self, *args, **kwds):
         """Return the gradient"""
         return jax_wrapper(grad, self._func, self.get_args, self.varidx, *args, **kwds)
