@@ -14,7 +14,6 @@ from other model properties.
 from collections import OrderedDict as odict
 
 import numpy as np
-import yaml
 
 from .property import Property
 from .derived import Derived
@@ -78,9 +77,7 @@ class Model:
         """ C'tor.  Build from a set of keyword arguments.
         """
         self._properties, self._params = self.find_properties()
-        self._init_properties()
-        self.set_attributes(**kwargs)
-        # In case no properties were set, cache anyway
+        self._init_properties(**kwargs)
         self._cache()
 
     @classmethod
@@ -105,20 +102,19 @@ class Model:
         except AttributeError:
             ret = "%s" % (type(self))
         if not self._properties: #pragma: no cover
-            pass
-        else:
-            ret += '\n{0:>{2}}{1}'.format('', 'Parameters:', indent + 2)
-            width = len(max(self._properties.keys(), key=len))
-            for name in self._properties.keys():
-                value = getattr(self, name)
-                par = '{0!s:{width}} : {1!r}'.format(name, value, width=width)
-                ret += '\n{0:>{2}}{1}'.format('', par, indent + 4)
+            return ret
+        ret += '\n{0:>{2}}{1}'.format('', 'Parameters:', indent + 2)
+        width = len(max(self._properties.keys(), key=len))
+        for name in self._properties.keys():
+            value = getattr(self, name)
+            par = '{0!s:{width}} : {1!r}'.format(name, value, width=width)
+            ret += '\n{0:>{2}}{1}'.format('', par, indent + 4)
         return ret
 
     @classmethod
     def defaults_docstring(cls, header=None, indent=None, footer=None):
         """Add the default values to the class docstring"""
-        return model_docstring(cls, header=header, indent=indent, footer=footer)
+        return model_docstring(cls, header=header, indent=indent, footer=footer) #pragma: no cover
 
     def getp(self, name):
         """
@@ -155,16 +151,12 @@ class Model:
         The other keywords are passed to the Property.__set__() function
         """
         kwcopy = kwargs.copy()
-        clear_derived = kwcopy.pop('clear_derived', True)
-
-        try:
-            prop = self._properties[name]
-            prop.__set__(kwcopy)
-        except TypeError as msg:
-            raise TypeError("Failed to set Property %s" % name) from msg
-
-        if clear_derived:
-            self.clear_derived()
+        if 'value' in kwcopy:
+            value = kwcopy.pop('value')
+            setattr(self, name, value)
+        if kwcopy:
+            print(kwcopy)
+            setattr(self, name, kwcopy)
         self._cache(name)
 
     def set_attributes(self, **kwargs):
@@ -173,41 +165,40 @@ class Model:
         `setp` directly, so kwargs can include more than just the
         parameter value (e.g., bounds, free, etc.).
         """
-        self.clear_derived()
         kwargs = dict(kwargs)
         for name, value in kwargs.items():
             # Raise AttributeError if param not found
             try:
                 self.getp(name)
-            except KeyError:
-                print ("Warning: %s does not have attribute %s" %
-                       (type(self), name))
+            except KeyError as msg:
+                raise KeyError("Warning: %s does not have attribute %s" %
+                       (type(self), name)) from msg
             # Set attributes
-            try:
-                self.setp(name, clear_derived=False, value=value)
-            except (TypeError, KeyError):
-                self.__setattr__(name, value)
-            # pop this attribued off the list of missing properties
-            self._missing.pop(name, None)
-        # Check to make sure we got all the required properties
-        if self._missing:
-            raise ValueError("One or more required properties are missing ", self._missing.keys())
+            self.setp(name, value=value)
 
-    def _init_properties(self):
+    def _init_properties(self, **kwargs):
         """ Loop through the list of Properties,
         extract the derived and required properties and do the
         appropriate book-keeping
         """
-        self._missing = {}
+        missing = {}
+        kwcopy = kwargs.copy()
         for k, p in self._properties.items():
-            if p.required:
-                self._missing[k] = p
+            if k not in kwcopy and p.required:
+                missing[k] = p
+            pval = kwcopy.pop(k, p.default)
+            p.__set__(self, pval)
             if isinstance(p, Derived):
                 if p.loader is None:
-                    # Default to using _<param_name>
                     p.loader = self.__getattribute__("_load_%s" % k)
                 elif isinstance(p.loader, str):
                     p.loader = self.__getattribute__(p.loader)
+                if not callable(p.loader):
+                    raise ValueError("Callabe loader not defined for Derived object", type(self), k, p.loader)
+        if missing:
+            raise ValueError("One or more required properties are missing ", type(self), missing.keys())
+        if kwcopy:
+            raise KeyError("Warning: %s does not have attributes %s" % (type(self), kwcopy))
 
     def get_params(self, pnames=None):
         """ Return a list of Parameter objects
@@ -275,30 +266,112 @@ class Model:
         Note that this is a N x 2 array.
         """
         l = self.get_params(pnames)
-        v = [p.errors for p in l]
+        v = [getattr(self, p.errors_name) for p in l]
         return np.array(v)
 
-    def clear_derived(self):
-        """ Reset the value of all Derived properties to None
+    def param_sym_errors(self, pnames=None):
+        """ Return an array with the parameter errors
 
-        This is called by setp (and by extension __setattr__)
+        Parameters
+        ----------
+        pname : list of string or none
+           If a list of strings, get the Parameter objects with those names
+
+           If none, get all the Parameter objects
+
+        Returns
+        -------
+        ~numpy.array of parameter errors
+
+        Note that this is a N x 2 array.
         """
-        for p in self._properties.values():
-            if isinstance(p, Derived):
-                del p
+        l = self.get_params(pnames)
+        v = [p.symmetric_error(self) for p in l]
+        return np.array(v)
+
+    def param_bounds(self, pnames=None):
+        """ Return an array with the parameter bounds
+
+        Parameters
+        ----------
+        pname : list of string or none
+           If a list of strings, get the Parameter objects with those names
+
+           If none, get all the Parameter objects
+
+        Returns
+        -------
+        ~numpy.array of parameter errors
+
+        Note that this is a N x 2 array.
+        """
+        l = self.get_params(pnames)
+        v = [getattr(self, p.bounds_name) for p in l]
+        return np.array(v)
+
+    def param_scales(self, pnames=None):
+        """ Return an array with the parameter bounds
+
+        Parameters
+        ----------
+        pname : list of string or none
+           If a list of strings, get the Parameter objects with those names
+
+           If none, get all the Parameter objects
+
+        Returns
+        -------
+        ~numpy.array of parameter scale factors
+        """
+        l = self.get_params(pnames)
+        v = [getattr(self, p.scale_name) for p in l]
+        return np.array(v)
+
+    def param_free(self, pnames=None):
+        """ Return an array with the parameter bounds
+
+        Parameters
+        ----------
+        pname : list of string or none
+           If a list of strings, get the Parameter objects with those names
+
+           If none, get all the Parameter objects
+
+        Returns
+        -------
+        ~numpy.array of parameter free flags
+        """
+        l = self.get_params(pnames)
+        v = [getattr(self, p.free_name) for p in l]
+        return np.array(v)
+
+    def param_tostr(self, pnames=None):
+        """ Return an array with the parameter bounds
+
+        Parameters
+        ----------
+        pname : list of string or none
+           If a list of strings, get the Parameter objects with those names
+
+           If none, get all the Parameter objects
+
+        Returns
+        -------
+        ~numpy.array of parameter free flags
+        """
+        l = self.get_params(pnames)
+        s = ""
+        for p in l:
+            s += p.public_name
+            s += ": x"
+            s += p.tostr(self)
+            s += "\n"
+        return s
 
     def todict(self):
         """ Return self cast as an '~collections.OrderedDict' object
         """
-        ret = odict(name=self.__class__.__name__)
-        for key in self._properties.keys():
-            ret.update({key:getattr(self,key)})
-        return ret
-
-    def dump(self):
-        """ Dump this object as a yaml string
-        """
-        return yaml.dump(self.todict())
+        return odict([(key, val.todict(self)) for key, val in self._properties.items()])
 
     def _cache(self, name=None):
         """

@@ -2,9 +2,9 @@
 """
 A few simple utilities to help parse configurations
 """
+from collections import OrderedDict as odict
 
-import numpy as np
-
+import yaml
 
 try:
     basestring
@@ -12,15 +12,9 @@ except NameError:
     basestring = str
 
 
-def defaults_docstring(defaults, header=None, indent=None, footer=None):
+def defaults_docstring(defaults, header='', indent='', footer=''):
     """Return a docstring from a list of defaults.
     """
-    if indent is None:
-        indent = ''
-    if header is None:
-        header = ''
-    if footer is None:
-        footer = ''
 
     #width = 60
     #hbar = indent + width * '=' + '\n'  # horizontal bar
@@ -58,16 +52,9 @@ def defaults_decorator(defaults):
     return decorator
 
 
-def model_docstring(cls, header=None, indent=None, footer=None):
+def model_docstring(cls, header='', indent='', footer=''): #pragma: no cover
     """Return a docstring from a list of defaults.
     """
-    if indent is None:
-        indent = ''
-    if header is None:
-        header = ''
-    if footer is None:
-        footer = ''
-
     #width = 60
     #hbar = indent + width * '=' + '\n'  # horizontal bar
     hbar = '\n'
@@ -102,20 +89,20 @@ class Meta(type): #pragma: no cover
 def is_none(val):
     """Check for values equivalent to None
 
-    This will return True if val is one of None, 'none', 'None', np.nan
+    This will return True if val is one of None, 'none', 'None'
     """
     if not isinstance(val, (type(None), str)):
         return False
-    return val in [None, 'none', 'None', np.nan]
+    return val in [None, 'none', 'None']
 
 def is_not_none(val):
     """Check for values equivalent to None
 
-    This will return True if val is not on of  None, 'none', 'None', np.nan
+    This will return True if val is not on of  None, 'none', 'None'
     """
     if not isinstance(val, (type(None), str)):
         return True
-    return val not in [None, 'none', 'None', np.nan]
+    return val not in [None, 'none', 'None']
 
 
 def cast_type(dtype, value): #pylint: disable=too-many-return-statements
@@ -178,3 +165,13 @@ def cast_type(dtype, value): #pylint: disable=too-many-return-statements
         pass
     msg = "Value of type %s, when %s was expected." % (type(value), dtype)
     raise TypeError(msg)
+
+
+
+def odict_representer(dumper, data):
+    """ http://stackoverflow.com/a/21912744/4075339 """
+    # Probably belongs in a util
+    return dumper.represent_mapping(
+        yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, data.items())
+
+yaml.add_representer(odict, odict_representer)

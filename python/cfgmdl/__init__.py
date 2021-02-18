@@ -9,5 +9,4 @@ from .choice import Choice
 from .parameter import Parameter
 from .derived import Derived
 from .model import Model
-from .darray import Darray
 from .function import Function

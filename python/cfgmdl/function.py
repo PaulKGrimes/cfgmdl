@@ -12,39 +12,23 @@ import jax.numpy as jnp
 def check_inputs(x, inputs):
     """Convert inputs to arrays"""
     ret = []
-    if isinstance(x, Iterable):
-        try:
-            x = np.array(x).astype(np.float)
-        except ValueError as msg:
-            raise msg
-        ones = np.ones(x.shape)
-        if not inputs:
-            return x
-        ret.append(x)
-        for inp in inputs:
-            if callable(inp):
-                ret.append(inp(x).astype(np.float))
-            elif isinstance(inp, Iterable):
-                ret.append(np.array(inp).astype(np.float)*ones)
-            elif isinstance(inp, (int, float)):
-                ret.append(np.array([inp for i in x]).astype(np.float)*ones)
-            elif inp is None:
-                ret.append(np.full(x.shape, np.nan))
-            else:
-                raise Exception("Non-numeric value %s passed in Physics" % (str(x)))
-    elif isinstance(x, (int, float)):
-        if not inputs:
-            return x
-        ret.append(float(x))
-        for inp in inputs:
-            if callable(inp):
-                ret.append(float(inp(x)))
-            elif isinstance(inp, (int, float)):
-                ret.append(float(inp))
-            else:
-                ret.append(inp)
-    else:
-        raise Exception("Non-numeric value %s passed in Physics" % (str(x)))
+    if not isinstance(x, (Iterable, int, float)):
+        raise TypeError("Non-numeric value %s passed in Physics" % (str(x)))
+
+    x = np.array(x).astype(np.float)
+    ret.append(x)
+    if not inputs:
+        return ret
+
+    for inp in inputs:
+        if callable(inp):
+            ret.append(inp(x).astype(np.float))
+        elif inp is None:
+            ret.append(np.full(x.shape, np.nan))
+        elif isinstance(inp, (Iterable, int, float)):
+            ret.append(np.array(inp).astype(np.float))
+        else:
+            raise TypeError("Non-numeric value %s passed in Physics" % (str(x)))
     return ret
 
 
@@ -172,7 +156,8 @@ class Function:
 
     def get_args(self, *args, **kwds):
         """Get the arguments"""
-        use_args = [arg for arg in args]
+        #use_args = [arg for arg in args]
+        use_args = list(args)
         nargs = len(use_args)
         for varname in self._varnames[nargs:]:
             use_args.append(kwds.get(varname, getattr(self._obj, varname)))

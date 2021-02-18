@@ -2,9 +2,8 @@
 """ Tools to manage Properties attached to client classes
 """
 
-
+import time
 from .utils import cast_type, Meta, defaults_decorator, defaults_docstring
-
 
 try:
     basestring
@@ -41,12 +40,21 @@ class Property:
 
     @defaults_decorator(defaults)
     def __init__(self, **kwargs):
-        self._load(**kwargs)
+        self.help = None
+        self.format = None
+        self.dtype = type(None)
+        self.default = None
+        self.required = None
+        self.public_name = None
         self.private_name = None
+        self.time_name = None
+        self._load(**kwargs)
 
     def __set_name__(self, owner, name):
         """Set the name of the privately managed value"""
+        self.public_name = name
         self.private_name = '_' + name
+        self.time_name = '_' + name + '_timestamp'
 
     def __set__(self, obj, value):
         """Set the value in the client object
@@ -67,12 +75,14 @@ class Property:
         ValueError : The input value failes validation for a Property sub-class (e.g., not a valid choice, or outside bounds)
         """
         try:
-            cast_value = cast_type(self.dtype, value)  #pylint: disable=no-member
-            self.validate_value(cast_value)
+            cast_value = self._cast_type(value)
+            self.validate_value(obj, cast_value)
         except (TypeError, ValueError) as msg:
             setattr(obj, self.private_name, None)
-            raise msg
+            setattr(obj, self.time_name, time.time())
+            raise TypeError("Failed to set %s %s" % (self.private_name, msg)) from msg
         setattr(obj, self.private_name, cast_value)
+        setattr(obj, self.time_name, time.time())
 
     def __get__(self, obj, objtype=None):
         """Get the value from the client object
@@ -87,10 +97,6 @@ class Property:
         out : ...
             The requested value
         """
-        try:
-            return getattr(obj, self.private_name)
-        except AttributeError:
-            setattr(obj, self.private_name, self.default)  #pylint: disable=no-member
         return getattr(obj, self.private_name)
 
     def __delete__(self, obj):
@@ -99,7 +105,8 @@ class Property:
         This can be useful for sub-classes that use None
         to indicate an un-initialized value.
         """
-        setattr(obj, self.private_name, self.default)  #pylint: disable=no-member
+        setattr(obj, self.private_name, self.default)
+        setattr(obj, self.time_name, time.time())
 
     def _load(self, **kwargs):
         """Load kwargs key,value pairs into __dict__
@@ -110,20 +117,31 @@ class Property:
             if k not in defaults:
                 msg = "Unrecognized attribute of %s: %s" % (self.__class__.__name__, k)
                 raise AttributeError(msg)
+
         defaults.update(kwargs)
 
         # This doesn't overwrite the properties
         self.__dict__.update(defaults)
 
         # Make sure the default is valid
-        _ = cast_type(self.dtype, self.default)  #pylint: disable=no-member
+        _ = self._cast_type(self.default)
+
+    def _cast_type(self, value):
+        """Hook took override type casting"""
+        return cast_type(self.dtype, value)
 
     @classmethod
     def defaults_docstring(cls, header=None, indent=None, footer=None):
         """Add the default values to the class docstring"""
-        return defaults_docstring(cls.defaults, header=header,
-                                  indent=indent, footer=footer)
+        return defaults_docstring(cls.defaults, header=header, indent=indent, footer=footer) #pragma: no cover
 
-    def validate_value(self, value): #pylint: disable=unused-argument,no-self-use
+    def validate_value(self, obj, value): #pylint: disable=unused-argument,no-self-use
         """Validate a value"""
         return
+
+    def todict(self, obj):
+        """Extract value """
+        val = getattr(obj, self.private_name)
+        if hasattr(val, 'todict'):
+            return val.todict()
+        return val

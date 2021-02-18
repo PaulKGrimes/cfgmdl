@@ -27,10 +27,12 @@ class Choice(Property):
     def __init__(self, **kwargs):
         super(Choice, self).__init__(**kwargs)
 
-    def validate_value(self, value):
+    def validate_value(self, obj, value):
         """Validate a value
 
         In this case it checks that value is in the set of allowed choices
         """
+        if value is None:
+            return
         if value not in self.choices: #pylint: disable=no-member
             raise ValueError("%s not allow, options are %s" % (value, self.choices))  #pylint: disable=no-member
