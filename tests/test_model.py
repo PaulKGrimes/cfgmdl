@@ -48,15 +48,15 @@ def test_model():
     b.z = 100.
     assert b.z == 100.
 
-    b.setp('z', value=40.)
+    b.update(z=40.)
     assert b.z == 40.
 
-    b.setp('z', free=True)
-    assert b.param_free(['z'])
+    b.update(z=dict(free=True))
+    assert b._z.free
 
-    try: b.setp('z', bounds="aa")
-    except ValueError: pass
-    else: raise ValueError("Failed to catch TypeError in Parameter.__set__")
+    try: b.update(z=dict(bounds="aa"))
+    except TypeError: pass
+    else: raise TypeError("Failed to catch TypeError in Parameter.__set__")
 
     t = test_class(req=2.,var=2.)
 
@@ -72,28 +72,26 @@ def test_model():
     assert t_copy.opt == t.opt    
 
     dd['var'] = 1.5
-    t_copy.set_attributes(**dd)
+    t_copy.update(**dd)
     assert t_copy.var == 1.5
 
-    try: t_copy.set_attributes(aa=15.)
+    try: t_copy.update(aa=15.)
     except KeyError: pass
-    else: raise KeyError("Failed to catch AttributeError in Model.set_attributes")
+    else: raise KeyError("Failed to catch KeyError in Model.update")
 
-    try: t_copy.set_attributes(var=15.)
-    except TypeError: pass
-    else: raise TypeError("Failed to catch ValueError in Model.set_attributes")
+    try: t_copy.update(15.)
+    except ValueError: pass
+    else: raise ValueError("Failed to catch ValueError in Model.update")
+        
+    try: t_copy.update(var=15.)
+    except ValueError: pass
+    else: raise ValueError("Failed to catch ValueError in Model.update %s" % t_copy._var)
 
-    assert t.param_sym_errors(['var']) == 0.2
-    assert np.isnan(t.param_sym_errors(['var2']))
+    t.update(var=dict(errors=0.1))
+    assert np.allclose(t._var.errors, 0.1)
 
-    t.setp('var', errors=0.1)
-    assert np.allclose(t.param_errors(['var']), 0.1)
-    assert np.allclose(t.param_sym_errors(['var']), 0.1)
-
-    t.setp('var', errors=[0.1, 0.2, 0.3])
-    assert np.allclose(t.param_errors(['var']), [0.1, 0.2, 0.3])
-    assert np.allclose(t.param_sym_errors(['var']), [0.1, 0.2, 0.3])
-
+    t.update(var=dict(errors=[0.1, 0.2, 0.3]))
+    assert np.allclose(t._var.errors, [0.1, 0.2, 0.3])
     
     test_val = t.req * t.opt * t.var
     check = t.der
@@ -128,55 +126,30 @@ def test_model():
     assert len(vals) == 1
     assert vals[0] == 3.
 
-    errs = a.param_errors()
-    assert len(errs) == 2
-    assert np.isnan(errs[0]).all()
+    assert np.isnan(a._x.errors)
 
-    errs = a.param_errors(['x'])
-    assert len(errs) == 1
-    assert np.isnan(errs[0]).all()
+    assert np.isnan(a._x.bounds)
 
-    bounds = a.param_bounds()
-    assert len(bounds) == 2
-    assert np.isnan(bounds[0]).all()
+    assert np.allclose(a._x.scale, 1)
 
-    bounds = a.param_bounds(['x'])
-    assert len(bounds) == 1
-    assert np.isnan(bounds[0]).all()
-    
-    scales = a.param_scales()
-    assert len(scales) == 2
-    assert np.allclose(scales, 1)
+    assert not a._x.free
 
-    scales = a.param_scales(['x'])
-    assert len(scales) == 1
-    assert np.allclose(scales, 1)
-    
-    free = a.param_free()
-    assert len(free) == 2
-    assert not free.any()
-
-    free = a.param_free(['x'])
-    assert len(free) == 1
-    assert not free.any()
-
-    
     a_dict = a.todict()
     a_str = str(a)
     a_yaml = yaml.dump(a_dict)
-
-    a_p_str = a.param_tostr()
-
+    a_pstr = a.param_str()
+    print(a_pstr)
+    
     for key in ['x', 'y']:
         assert key in a_dict
         assert a_str.index(key) >= 0
         assert a_yaml.index(key) >= 0
-        assert a_p_str.index(key) >= 0
-        
+        assert a_pstr.index(key) >= 0
+
         
     try: a.x = 'afda'
     except TypeError: pass
-    else: raise TypeError("Failed to catch TypeError in Model.setp")
+    else: raise TypeError("Failed to catch TypeError in Model.__set__")
 
     aa = Child(x=2.)
     aa.x == 2
@@ -186,7 +159,7 @@ def test_model():
 
     try: bad = test_class(req="aa")
     except TypeError: pass
-    else: raise TypeError("Failed to catch TypeError in Model.set_attributes")
+    else: raise TypeError("Failed to catch TypeError in Model.update")
 
     try: bad = Child(vv=dict(value=3))
     except KeyError: pass
@@ -208,7 +181,7 @@ def test_property_model():
     class TestClass(Model):
         p1 = Property(dtype=Inner, default=Inner())
         p2 = Property(dtype=Inner, default=Inner())
-
+        px = Parameter()
         der = Derived(dtype=float, format='%.1f', help="A derived parameter")
 
         def _load_der(self):
@@ -247,3 +220,8 @@ def test_property_model():
 
     assert np.allclose(extract_vals(test_obj), extract_vals(test_copy))
     
+    test_obj.update(px=3.3)
+    assert test_obj.px == 3.3
+
+    test_obj.update(px=[3.3, 3.4])
+    assert np.allclose(test_obj.px, [3.3, 3.4])

@@ -43,5 +43,5 @@ def test_choice():
     except (TypeError, ValueError): pass
     else: raise TypeError("Failed to catch ValueError in Choice")
         
-    help(test_obj.getp('vv'))
+    help(test_obj._vv)
     #test_obj.getp('vv').dump()

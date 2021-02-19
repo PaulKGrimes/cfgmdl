@@ -16,12 +16,11 @@ class Choice(Property):
     """
 
     # Better to keep the structure consistent with Property
-    defaults = deepcopy(Property.defaults) + [
-        ('choices', [], 'Allowed values'),
-    ]
+    defaults = deepcopy(Property.defaults)
+    defaults['choices'] = ([], 'Allowed values')
+
     # Overwrite the default dtype
-    idx = [d[0] for d in defaults].index('dtype')
-    defaults[idx] = ('dtype', str, 'Data type')
+    defaults['dtype'] = (str, 'Data type')
 
     @defaults_decorator(defaults)
     def __init__(self, **kwargs):

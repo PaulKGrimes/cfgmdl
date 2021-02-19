@@ -12,6 +12,10 @@ except NameError:
     basestring = str
 
 
+
+
+
+
 def defaults_docstring(defaults, header='', indent='', footer=''):
     """Return a docstring from a list of defaults.
     """
@@ -21,7 +25,7 @@ def defaults_docstring(defaults, header='', indent='', footer=''):
     hbar = '\n'
 
     s = hbar + (header) + hbar
-    for key, value, desc in defaults:
+    for key, (value, desc) in defaults.items():
         if isinstance(value, basestring):
             value = "'" + value + "'"
         if hasattr(value, '__call__'):
@@ -84,6 +88,29 @@ class Meta(type): #pragma: no cover
                       indent='  ',
                       footer='\n')
         return cls._doc + cls.defaults_docstring(**kwargs)
+
+
+class Defs:
+    """ Mixin class to handle default value construction"""
+    __metaclass__ = Meta
+
+    defaults = odict()
+
+    def __init__(self, default_prefix=''):
+        """Load kwargs key,value pairs into __dict__
+        """
+        self._default_prefix = default_prefix
+        for key, val in self.defaults.items():
+            self.__dict__["%s%s" % (default_prefix, key)] = val[0]
+
+    @property
+    def default_prefix(self):
+        """Get the prefix associated to defaults to make attributes"""
+        return self._default_prefix
+
+    def default_value(self, name):
+        """Get the default value of a particular attribute"""
+        return self.__class__.defaults.get(name)[0]
 
 
 def is_none(val):

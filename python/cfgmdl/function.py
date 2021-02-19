@@ -12,7 +12,9 @@ import jax.numpy as jnp
 def check_inputs(x, inputs):
     """Convert inputs to arrays"""
     ret = []
-    if not isinstance(x, (Iterable, int, float)):
+    if x is None:
+        x = np.nan
+    elif not isinstance(x, (Iterable, int, float)):
         raise TypeError("Non-numeric value %s passed in Physics" % (str(x)))
 
     x = np.array(x).astype(np.float)

@@ -3,7 +3,11 @@
 """
 
 import time
-from .utils import cast_type, Meta, defaults_decorator, defaults_docstring
+
+from collections import OrderedDict as odict
+
+
+from .utils import cast_type, Meta, Defs, defaults_decorator, defaults_docstring
 
 try:
     basestring
@@ -12,7 +16,7 @@ except NameError:
 
 
 
-class Property:
+class Property(Defs):
     """Base class to attach managed attribute to class.
 
     Notes
@@ -30,13 +34,14 @@ class Property:
     """
     __metaclass__ = Meta
 
-    defaults = [
-        ('help', "", 'Help description'),
-        ('format', '%s', 'Format string for printing'),
-        ('dtype', None, 'Data type'),
-        ('default', None, 'Default value'),
-        ('required', False, 'Is this propery required?'),
-    ]
+    defaults = odict([
+        ('help', ("", 'Help description')),
+        ('format', ('%s', 'Format string for printing')),
+        ('dtype', (None, 'Data type')),
+        ('default', (None, 'Default value')),
+        ('required', (False, 'Is this propery required?')),
+        ('unit', (None, 'Units for unit')),
+    ])
 
     @defaults_decorator(defaults)
     def __init__(self, **kwargs):
@@ -45,9 +50,11 @@ class Property:
         self.dtype = type(None)
         self.default = None
         self.required = None
+        self.unit = None
         self.public_name = None
         self.private_name = None
         self.time_name = None
+        super(Property, self).__init__()
         self._load(**kwargs)
 
     def __set_name__(self, owner, name):
@@ -64,8 +71,7 @@ class Property:
         obj : ...
             The client object
         value : ...
-            The value being set
-
+            The value being seti
         This will use the `cast_type(self.dtype, value)` method to cast the requested value to the correct type.
 
         Rasies
@@ -97,7 +103,10 @@ class Property:
         out : ...
             The requested value
         """
-        return getattr(obj, self.private_name)
+        attr = getattr(obj, self.private_name)
+        if self.unit is None:
+            return attr
+        return self.unit(attr) #pylint: disable=not-callable
 
     def __delete__(self, obj):
         """Set the value to the default value
@@ -111,10 +120,10 @@ class Property:
     def _load(self, **kwargs):
         """Load kwargs key,value pairs into __dict__
         """
-        defaults = {d[0]:d[1] for d in self.defaults}
+        defaults = {}
         # Require kwargs are in defaults
         for k in kwargs:
-            if k not in defaults:
+            if k not in self.defaults:
                 msg = "Unrecognized attribute of %s: %s" % (self.__class__.__name__, k)
                 raise AttributeError(msg)
 
@@ -125,6 +134,7 @@ class Property:
 
         # Make sure the default is valid
         _ = self._cast_type(self.default)
+
 
     def _cast_type(self, value):
         """Hook took override type casting"""

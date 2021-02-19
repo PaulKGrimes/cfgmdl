@@ -14,9 +14,8 @@ class Derived(Property):
     This allows specifying the specifying a 'loader' function by name
     that is used to compute the value of the property.
     """
-    defaults = deepcopy(Property.defaults) + [
-        ('loader', None, 'Function to load datum')
-    ]
+    defaults = deepcopy(Property.defaults)
+    defaults['loader'] = (None, 'Function to load datum')
 
     @classmethod
     def dummy(cls): #pragma: no cover

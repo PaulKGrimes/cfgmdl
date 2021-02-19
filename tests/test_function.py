@@ -38,6 +38,8 @@ def test_function():
     assert a.ff.grad(1., 1.) == 6.
     assert a.ff.hess(1., 1.) == 0.
 
+    assert np.isnan(a.ff(None, 1.))
+    
     try: a.ff(1.)
     except AttributeError: pass
     else: raise AttributeError("Failed to catch AttributeError in Function.get_args()")
