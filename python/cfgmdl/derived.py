@@ -15,7 +15,9 @@ class Derived(Property):
     that is used to compute the value of the property.
     """
     defaults = deepcopy(Property.defaults)
-    defaults['loader'] = (None, 'Function to load datum')
+    defaults['loadername'] = (None, 'Name of function to load datum')
+    defaults['loader'] = (None, 'Function to load datatum')
+    defaults['uses'] = ([], 'Properties used by this one')
 
     @classmethod
     def dummy(cls): #pragma: no cover
@@ -24,8 +26,26 @@ class Derived(Property):
 
     @defaults_decorator(defaults)
     def __init__(self, **kwargs):
-        self.loader = self.dummy
+        self.loader = None
+        self.loadername = None
+        self.uses = []
         super(Derived, self).__init__(**kwargs)
+
+    def __set_name__(self, owner, name):
+        """Set the name of the privately managed value"""
+        super(Derived, self).__set_name__(owner, name)
+        if self.loadername is None:
+            if self.loader is not None:
+                self.loadername = "_load_%s" % self.loader.__name__
+            else:
+                self.loadername = "_load_%s" % name
+        if self.loader is None:
+            loader = getattr(owner, self.loadername, None)
+            self.loader = loader
+            if not callable(self.loader):
+                raise ValueError("Callable loader not defined for Derived object", owner, name, self.loadername, self.loader)
+            return
+        setattr(owner, self.loadername, self.loader)
 
     def __get__(self, obj, objtype=None):
         """Get the value from the client object
@@ -50,15 +70,33 @@ class Derived(Property):
 
         loader = self.loader
 
-        times = [ getattr(obj, "_%s_timestamp" % vn, 0.) for vn in loader.__func__.__code__.co_names ]
+        if loader is None:
+            raise ValueError("%s.%s no loader" % (obj, self.public_name))
+
+        ts_check = self.check_timestamp(obj)
+        if ts_check and val is not None:
+            return val
+        val = loader(obj)
+        self.__set__(obj, val)
+        return getattr(obj, self.private_name)
+
+    def check_timestamp(self, obj):
+        """Check if object is up to date w.r.t. to the object it uses"""
+        times = [vn.timestamp(obj) for vn in self.uses]
         if times:
             ts_max = np.max(times)
         else:
             ts_max = 0.
-        my_ts = getattr(obj, self.time_name, -1.)
+        my_ts = self.timestamp(obj)
+        return my_ts >= ts_max
 
-        if my_ts > ts_max and val is not None:
-            return val
-        val = loader()
-        self.__set__(obj, val)
-        return getattr(obj, self.private_name)
+
+
+def cached(**kwargs):
+    """Decorator attach a function to a class as a Derived property
+    """
+    def decorator(func):
+        """Function that appends default kwargs to a function.
+        """
+        return Derived(loader=func, **kwargs)
+    return decorator

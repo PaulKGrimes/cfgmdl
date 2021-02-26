@@ -127,7 +127,7 @@ def test_property_float():
     check_property(float, 1., 2., "aa", 1, test_unit=Unit('mm'))
 
 def test_property_list():
-    check_property(list, [], [3, 4], None, (3, 4), test_unit=Unit('mm'))
+    check_property(list, [], [3, 4], None, test_unit=Unit('mm'))
 
 def test_property_dict():
     check_property(dict, {}, {3:4})

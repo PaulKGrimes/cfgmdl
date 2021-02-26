@@ -14,9 +14,9 @@ def test_derived():
         x = Property(dtype=float, default=1., help='variable x')
         y = Property(dtype=float, default=2., help='variable y')
         z = Property(dtype=float, required=True, help='variable y')
-        der = Derived(dtype=float, format='%.1f', help="A derived parameter")
-        der2 = Derived(dtype=float, format='%.1f', loader="_loader2", help="A derived parameter")
-        der3 = Derived(dtype=float, format='%.1f', loader="_loader3", help="A derived parameter")    
+        der = Derived(dtype=float, format='%.1f', uses=[x,y,z], help="A derived parameter")
+        der2 = Derived(dtype=float, format='%.1f', loadername="_loader2", uses=[x,y,z], help="A derived parameter")
+        der3 = Derived(dtype=float, format='%.1f', loadername="_loader3", uses=[], help="A derived parameter")    
         
         def _load_der(self):
             dummy = 1.
@@ -56,11 +56,11 @@ def test_derived():
     del test_obj.der
     assert test_obj._der is None
 
-    
-    class TestClass(Model):        
-        g = 7
-        der = Derived(dtype=float, format='%.1f', loader=g, help="A derived parameter")
+    try:
+        class TestClass(Model):        
+            g = 7
+            der = Derived(dtype=float, format='%.1f', loader=g, help="A derived parameter")
 
-    try: test_obj = TestClass()
-    except ValueError: pass
-    else: raise ValueError("Failed to catch ValueError in Derived.loader")
+        test_obj = TestClass()
+    except RuntimeError: pass
+    else: raise RuntimeError("Failed to catch ValueError in Derived.loader")

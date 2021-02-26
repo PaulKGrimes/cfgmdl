@@ -7,7 +7,7 @@ import time
 from collections import OrderedDict as odict
 
 
-from .utils import cast_type, Meta, Defs, defaults_decorator, defaults_docstring
+from .utils import is_none, cast_type, Meta, Defs, defaults_decorator, defaults_docstring
 
 try:
     basestring
@@ -63,6 +63,7 @@ class Property(Defs):
         self.private_name = '_' + name
         self.time_name = '_' + name + '_timestamp'
 
+
     def __set__(self, obj, value):
         """Set the value in the client object
 
@@ -71,7 +72,7 @@ class Property(Defs):
         obj : ...
             The client object
         value : ...
-            The value being seti
+            The value being set
         This will use the `cast_type(self.dtype, value)` method to cast the requested value to the correct type.
 
         Rasies
@@ -81,14 +82,16 @@ class Property(Defs):
         ValueError : The input value failes validation for a Property sub-class (e.g., not a valid choice, or outside bounds)
         """
         try:
-            cast_value = self._cast_type(value)
+            cast_value = self._cast_type(value, obj)
             self.validate_value(obj, cast_value)
         except (TypeError, ValueError) as msg:
             setattr(obj, self.private_name, None)
             setattr(obj, self.time_name, time.time())
-            raise TypeError("Failed to set %s %s" % (self.private_name, msg)) from msg
+            raise TypeError("Failed to set %s %s %s" % (repr(obj), self.private_name, msg)) from msg
         setattr(obj, self.private_name, cast_value)
         setattr(obj, self.time_name, time.time())
+        if hasattr(obj, '_timestamp'):
+            setattr(obj, '_timestamp', time.time())
 
     def __get__(self, obj, objtype=None):
         """Get the value from the client object
@@ -104,7 +107,7 @@ class Property(Defs):
             The requested value
         """
         attr = getattr(obj, self.private_name)
-        if self.unit is None:
+        if self.unit is None or is_none(attr):
             return attr
         return self.unit(attr) #pylint: disable=not-callable
 
@@ -116,6 +119,8 @@ class Property(Defs):
         """
         setattr(obj, self.private_name, self.default)
         setattr(obj, self.time_name, time.time())
+        if hasattr(obj, '_timestamp'):
+            setattr(obj, '_timestamp', time.time())
 
     def _load(self, **kwargs):
         """Load kwargs key,value pairs into __dict__
@@ -136,9 +141,13 @@ class Property(Defs):
         _ = self._cast_type(self.default)
 
 
-    def _cast_type(self, value):
+    def _cast_type(self, value, obj=None): #pylint: disable=unused-argument
         """Hook took override type casting"""
         return cast_type(self.dtype, value)
+
+    def timestamp(self, obj):
+        """Get the timestamp when this object was updated"""
+        return max(getattr(obj, self.time_name), getattr(getattr(obj, self.private_name), '_timestamp', 0))
 
     @classmethod
     def defaults_docstring(cls, header=None, indent=None, footer=None):

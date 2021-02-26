@@ -14,7 +14,9 @@ def test_units():
     one = Unit()
     assert one.name == ''
     assert one(1.) == 1.
-
+    assert one(None) is None
+    assert one.inverse(None) is None
+    
     mm = Unit('mm')
     assert mm.name == 'mm'
     assert mm(1.) == 1e-3

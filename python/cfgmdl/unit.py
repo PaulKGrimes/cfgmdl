@@ -32,10 +32,14 @@ class Unit:
 
     def __call__(self, val):
         """Convert value to SI unit """
+        if val is None:
+            return None
         return np.array(val) * self._SI
 
     def inverse(self, val):
         """Convert value from SI unit """
+        if val is None:
+            return None
         return np.array(val) / self._SI
 
     @classmethod

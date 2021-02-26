@@ -1,21 +1,13 @@
 #!/usr/bin/env python
 """
-Classes used to describe aspect of Models.
-
-The base class is `Property` which describes any one property of a model,
-such as the name, or some other fixed property.
-
-The `Parameter` class describes variable model parameters.
-
-The `Derived` class describes model properies that are derived
-from other model properties.
-
+Base class for configurable objects
 """
 from collections import OrderedDict as odict
 from collections.abc import Mapping
 
 from .property import Property
 from .derived import Derived
+from .ref import Ref
 
 from .utils import Meta, model_docstring
 
@@ -74,9 +66,8 @@ class Configurable:
     def __init__(self, **kwargs):
         """ C'tor.  Build from a set of keyword arguments.
         """
-        self._properties = self.find_properties()
+        self._timestamp = 0
         self._init_properties(**kwargs)
-        self._cache()
 
     @classmethod
     def find_properties(cls):
@@ -89,19 +80,36 @@ class Configurable:
                     props[key] = val
         return props
 
+    @classmethod
+    def getp(cls, name):
+        """Get a particular property of this model"""
+        props = cls.find_properties()
+        return props[name]
+
+    @property
+    def _properties(self):
+        """Return the properties of this class"""
+        return self.find_properties()
+
     def __str__(self, indent=0):
         """ Cast model as a formatted string
         """
+        props = self._properties
         try:
             ret = '{0:>{2}}{1}'.format('', self.name, indent)
         except AttributeError:
             ret = "%s" % (type(self))
-        if not self._properties: #pragma: no cover
+        if not props: #pragma: no cover
             return ret
         ret += '\n{0:>{2}}{1}'.format('', 'Parameters:', indent + 2)
-        width = len(max(self._properties.keys(), key=len))
-        for name in self._properties.keys():
-            value = getattr(self, name)
+
+        width = len(max(props.keys(), key=len))
+        for prop in props.values():
+            name = prop.public_name
+            if isinstance(prop, Derived):
+                value = getattr(self, prop.private_name)
+            else:
+                value = getattr(self, name)
             par = '{0!s:{width}} : {1!r}'.format(name, value, width=width)
             ret += '\n{0:>{2}}{1}'.format('', par, indent + 4)
         return ret
@@ -121,13 +129,16 @@ class Configurable:
             raise ValueError("Argument passed to Model.upate() %s" % args)
 
         kwargs = dict(kwargs)
+        props = self._properties
         for name, value in kwargs.items():
             # Raise KeyError if Property not found
             try:
-                prop = self._properties[name]
+                prop = props[name]
             except KeyError as err:
                 raise KeyError("Warning: %s does not have properties %s" % (type(self), name)) from err
 
+            if isinstance(prop, (Ref, Derived)):
+                continue
             attr = getattr(self, '_%s' % name)
             if isinstance(attr, Configurable):
                 # Set attributes
@@ -146,20 +157,17 @@ class Configurable:
         """
         missing = {}
         kwcopy = kwargs.copy()
-        for k, p in self._properties.items():
+        props = self._properties
+        for k, p in props.items():
             if k not in kwcopy and p.required:
                 missing[k] = p
 
             pval = kwcopy.pop(k, p.default)
-
+            if isinstance(p, Ref):
+                setattr(self, p.owner_name, p.owner)
+                setattr(self, p.private_name, None)
+                continue
             p.__set__(self, pval)
-            if isinstance(p, Derived):
-                if p.loader is None:
-                    p.loader = self.__getattribute__("_load_%s" % k)
-                elif isinstance(p.loader, str):
-                    p.loader = self.__getattribute__(p.loader)
-                if not callable(p.loader):
-                    raise ValueError("Callabe loader not defined for Derived object", type(self), k, p.loader)
         if missing:
             raise ValueError("One or more required properties are missing ", type(self), missing.keys())
         if kwcopy:
@@ -169,21 +177,3 @@ class Configurable:
         """ Return self cast as an '~collections.OrderedDict' object
         """
         return odict([(key, val.todict(self)) for key, val in self._properties.items()])
-
-
-    def _cache(self, name=None):
-        """
-        Method called in  to cache any computationally
-        intensive properties after updating the parameters.
-
-        Parameters
-        ----------
-        name : string
-           The parameter name.
-
-        Returns
-        -------
-        None
-        """
-        #pylint: disable=unused-argument, no-self-use
-        return

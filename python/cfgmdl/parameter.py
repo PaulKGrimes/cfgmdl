@@ -98,7 +98,7 @@ class Parameter(Property):
         """Extract values as a string"""
         return str(getattr(obj, self.private_name))
 
-    def _cast_type(self, value):
+    def _cast_type(self, value, obj=None):
         """Hook took override type casting"""
         return value
 

@@ -3,6 +3,7 @@
 A few simple utilities to help parse configurations
 """
 from collections import OrderedDict as odict
+from collections.abc import Mapping, Iterable
 
 import yaml
 
@@ -12,6 +13,33 @@ except NameError:
     basestring = str
 
 
+def expand_dict(in_dict):
+    """Expand a dictionary by copying defaults to a set of elements
+
+    Parameters
+    ----------
+    in_dict : `dict`
+        The input dictionary
+
+    elem_dict : `dict`
+        The elements
+
+    Returns
+    -------
+    o_dict : `dict`
+        The output dict
+    """
+    if 'default' not in in_dict:
+        return in_dict
+    default_dict = in_dict.get('default')
+    elem_dict = in_dict.get('elements')
+    o_dict = odict()
+    for key, elem in elem_dict.items():
+        o_dict[key] = default_dict.copy()
+        if elem is None:
+            continue
+        o_dict[key].update(elem)
+    return o_dict
 
 
 
@@ -63,7 +91,7 @@ def model_docstring(cls, header='', indent='', footer=''): #pragma: no cover
     #hbar = indent + width * '=' + '\n'  # horizontal bar
     hbar = '\n'
 
-    props, _ = cls.find_properties()
+    props = cls.find_properties()
 
     s = hbar + (header) + hbar
     for key, val in props.items():
@@ -170,26 +198,35 @@ def cast_type(dtype, value): #pylint: disable=too-many-return-statements
     # if value is an instance of self.dtype, then return it
     if isinstance(value, dtype):
         return value
-    # try and cast value itself to dtype constructor
+    if isinstance(value, Mapping):
+        return dtype(**value)
+    if isinstance(value, Iterable):
+        return dtype(*value)
     try:
         return dtype(value)
     except (TypeError, ValueError):
         pass
+
+    # try and cast value itself to dtype constructor
+    #try:
+    #    return dtype(value)
+    #except (TypeError, ValueError):
+    #    pass
     # try and cast the value as a list to dtype constructor
-    try:
-        return dtype(*value)
-    except (TypeError, ValueError):
-        pass
+    #try:
+    #    return dtype(*value)
+    #except (TypeError, ValueError):
+    #    pass
     # try and cast the value as a dict to dtype constructor
-    try:
-        return dtype(**value)
-    except (TypeError, ValueError):
-        pass
+    #try:
+    #    return dtype(**value)
+    #except (TypeError, ValueError):
+    #    pass
     # try and cast extract the 'value' item from a dict
-    try:
-        return dtype(value['value'])
-    except (TypeError, ValueError, KeyError):
-        pass
+    #try:
+    #    return dtype(value['value'])
+    #except (TypeError, ValueError, KeyError):
+    #    pass
     msg = "Value of type %s, when %s was expected." % (type(value), dtype)
     raise TypeError(msg)
 

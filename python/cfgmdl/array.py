@@ -18,6 +18,6 @@ class Array(Property):
     def __init__(self, **kwargs):
         super(Array, self).__init__(**kwargs)
 
-    def _cast_type(self, value):
+    def _cast_type(self, value, obj=None):
         """Hook took override type casting"""
         return np.array(value).astype(self.dtype)

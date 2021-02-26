@@ -27,6 +27,8 @@ def check_inputs(x, inputs):
             ret.append(inp(x).astype(np.float))
         elif inp is None:
             ret.append(np.full(x.shape, np.nan))
+        elif isinstance(inp, np.ndarray):
+            ret.append(inp)
         elif isinstance(inp, (Iterable, int, float)):
             ret.append(np.array(inp).astype(np.float))
         else:

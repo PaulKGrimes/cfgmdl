@@ -6,6 +6,7 @@ import numpy as np
 
 from .array import Array
 from .configurable import Configurable
+from .utils import is_none
 
 class ParamHolder(Configurable):
     """Wrapper around a data value
@@ -24,9 +25,11 @@ class ParamHolder(Configurable):
         """Constructor"""
         kwcopy = kwargs.copy()
         if args: #pragma: no cover
-            if 'value' in kwcopy:
-                raise ValueError("value keyword provided in addition to arguments")
+            #if 'value' in kwcopy:
+            #    raise ValueError("value keyword provided in addition to arguments")
             kwcopy['value'] = args
+        if is_none(kwargs.get('value', None)):
+            kwargs.pop('value', None)                       
         super(ParamHolder, self).__init__(**kwargs)
         self.check_bounds()
 

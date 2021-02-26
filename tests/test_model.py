@@ -28,7 +28,7 @@ def test_model():
         opt = Property(dtype=float, format='%.1f', default=1.0, help="An optional parameter")
         var = Parameter(default=1.0, bounds=[0., 3.], errors=[0.1, 0.3], free=True, help="A variable parameter")
         var2 = Parameter(default=1.0, free=False, help="A fixed parameter")
-        der = Derived(dtype=float, format='%.1f', help="A derived parameter")
+        der = Derived(dtype=float, uses=[req, opt, var], help="A derived parameter")
 
         def _load_der(self):
             return self.req * self.opt * self.var
@@ -173,7 +173,7 @@ def test_property_model():
         v = Property(dtype=float, default=1., help="A Property")
         v2 = Property(dtype=float, default=2., help="A Property")
         v3 = Property(dtype=float, default=3., help="A Property")
-        der = Derived(dtype=float, format='%.1f', help="A derived parameter")
+        der = Derived(dtype=float, uses=[v, v2, v3], help="A derived parameter")
 
         def _load_der(self):
             return self.v + self.v2 + self.v3
@@ -182,7 +182,7 @@ def test_property_model():
         p1 = Property(dtype=Inner, default=Inner())
         p2 = Property(dtype=Inner, default=Inner())
         px = Parameter()
-        der = Derived(dtype=float, format='%.1f', help="A derived parameter")
+        der = Derived(dtype=float, uses=[p1, p2], help="A derived parameter")
 
         def _load_der(self):
             return self.p1.der + self.p2.der
