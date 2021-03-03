@@ -25,6 +25,7 @@ class Parameter(Property):
     defaults['errors'] = (np.nan, 'Errors on this parameter')
     defaults['free'] = (False, 'Is this property allowed to vary?')
     defaults['scale'] = (1.0, 'Scale to apply for this property')
+    defaults['unit'] = (None, 'Units for this parameter')
 
     # Overwrite the default dtype
     defaults['dtype'] = (ParamHolder, 'Data type')
@@ -36,6 +37,7 @@ class Parameter(Property):
         self.errors = np.nan
         self.free = False
         self.scale = 1.
+        self.unit = None
         super(Parameter, self).__init__(**kwargs)
 
     def __set__(self, obj, value):
@@ -62,33 +64,18 @@ class Parameter(Property):
         """
         par = getattr(obj, self.private_name, None)
 
+        vals = dict(value=self.default, bounds=self.bounds, errors=self.errors, scale=self.scale, free=self.free, unit=self.unit)
+
         if par is None:
             if isinstance(value, Mapping):
-                par = self.dtype(**value)
+                vals.update(value)
             else:
-                par = self.dtype(value=value, bounds=self.bounds, errors=self.errors, scale=self.scale, free=self.free)
+                vals.update(dict(value=value))
+            par = self.dtype(**vals)
         else:
             par.update(value)
 
         super(Parameter, self).__set__(obj, par)
-
-    def __get__(self, obj, objtype=None):
-        """Get the value from the client object
-
-        Parameter
-        ---------
-        obj : ...
-            The client object
-
-        Return
-        ------
-        out : ...
-            The requested value
-        """
-        val = getattr(obj, self.private_name).__call__()
-        if self.unit is None:
-            return val
-        return self.unit(val) #pylint: disable=not-callable
 
     def todict(self, obj):
         """Extract values as an odict """

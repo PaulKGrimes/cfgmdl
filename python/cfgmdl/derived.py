@@ -44,7 +44,7 @@ class Derived(Property):
             self.loader = loader
             if not callable(self.loader):
                 raise ValueError("Callable loader not defined for Derived object", owner, name, self.loadername, self.loader)
-            return
+            #return
         setattr(owner, self.loadername, self.loader)
 
     def __get__(self, obj, objtype=None):
@@ -70,7 +70,7 @@ class Derived(Property):
 
         loader = self.loader
 
-        if loader is None:
+        if loader is None: #pragma: no cover
             raise ValueError("%s.%s no loader" % (obj, self.public_name))
 
         ts_check = self.check_timestamp(obj)

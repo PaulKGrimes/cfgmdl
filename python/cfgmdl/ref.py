@@ -10,7 +10,6 @@ class Ref(Property):
     """Property sub-class refering to properties of other objects
     """
     defaults = deepcopy(Property.defaults)
-    defaults.pop('unit')
     defaults.pop('dtype')
     defaults['owner'] = (None, 'Object that owns datum')
     defaults['attr'] = (None, 'Name of attribute in object that owns datum')
@@ -61,7 +60,7 @@ class Ref(Property):
             The client object
         value : ...
             The referenced object
-        """        
+        """
         setattr(obj, self.owner_name, value)
         _ = self.__get__(obj, self.public_name)
         setattr(obj, self.time_name, time.time())

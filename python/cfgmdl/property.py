@@ -7,7 +7,7 @@ import time
 from collections import OrderedDict as odict
 
 
-from .utils import is_none, cast_type, Meta, Defs, defaults_decorator, defaults_docstring
+from .utils import cast_type, Meta, Defs, defaults_decorator, defaults_docstring
 
 try:
     basestring
@@ -40,7 +40,6 @@ class Property(Defs):
         ('dtype', (None, 'Data type')),
         ('default', (None, 'Default value')),
         ('required', (False, 'Is this propery required?')),
-        ('unit', (None, 'Units for unit')),
     ])
 
     @defaults_decorator(defaults)
@@ -50,7 +49,6 @@ class Property(Defs):
         self.dtype = type(None)
         self.default = None
         self.required = None
-        self.unit = None
         self.public_name = None
         self.private_name = None
         self.time_name = None
@@ -106,10 +104,7 @@ class Property(Defs):
         out : ...
             The requested value
         """
-        attr = getattr(obj, self.private_name)
-        if self.unit is None or is_none(attr):
-            return attr
-        return self.unit(attr) #pylint: disable=not-callable
+        return getattr(obj, self.private_name)
 
     def __delete__(self, obj):
         """Set the value to the default value

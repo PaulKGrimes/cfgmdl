@@ -5,8 +5,9 @@ from collections.abc import Mapping
 import numpy as np
 
 from .array import Array
-from .configurable import Configurable
+from .configurable import Configurable, Property
 from .utils import is_none
+from .unit import Unit
 
 class ParamHolder(Configurable):
     """Wrapper around a data value
@@ -20,6 +21,7 @@ class ParamHolder(Configurable):
     bounds = Array(help='Parameter Bounds')
     scale = Array(default=1., help='Paramter Scale Factor')
     free = Array(dtype=bool, default=False, help='Free/Fixed Flag')
+    unit = Property(dtype=Unit, default=None, help='Parameter unit')
 
     def __init__(self, *args, **kwargs):
         """Constructor"""
@@ -29,9 +31,10 @@ class ParamHolder(Configurable):
             #    raise ValueError("value keyword provided in addition to arguments")
             kwcopy['value'] = args
         if is_none(kwargs.get('value', None)):
-            kwargs.pop('value', None)                       
+            kwargs.pop('value', None)
         super(ParamHolder, self).__init__(**kwargs)
         self.check_bounds()
+
 
     def __str__(self, indent=0):
         """Return self as a string"""
@@ -67,4 +70,25 @@ class ParamHolder(Configurable):
 
     def __call__(self):
         """Return the product of the value and the scale"""
+        base_val = self.scaled
+        if is_none(self.unit):
+            return base_val
+        return self.unit(base_val)
+
+    def set_from_SI(self, val):
+        """Set the value from SI units"""
+        if is_none(self.unit):
+            self.value = val
+            return
+        self.value = self.unit.inverse(val)
+
+
+    @property
+    def SI(self):
+        """Return the value in SI units"""
+        return self()
+
+    @property
+    def scaled(self):
+        """Return the value in original units"""
         return self.value * self.scale

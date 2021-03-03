@@ -14,4 +14,5 @@ from .choice import Choice
 from .parameter import Parameter
 from .param_holder import ParamHolder
 from .model import Model
-from .function import Function
+
+from . import tools, utils

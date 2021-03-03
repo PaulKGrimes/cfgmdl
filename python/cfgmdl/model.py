@@ -86,7 +86,7 @@ class Model(Configurable):
 
         """
         l = self.get_params(pnames)
-        v = [p.__get__(self) for p in l]
+        v = [p.__get__(self)() for p in l]
         return np.array(v)
 
 

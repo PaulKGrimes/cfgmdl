@@ -31,25 +31,25 @@ def test_model():
         der = Derived(dtype=float, uses=[req, opt, var], help="A derived parameter")
 
         def _load_der(self):
-            return self.req * self.opt * self.var
+            return self.req * self.opt * self.var()
 
 
     a = Parent()
-    assert a.x == 1.
-    assert a.y == 2.
+    assert a.x() == 1.
+    assert a.y() == 2.
 
     a.x = 3.
     a.y = 4.
 
     b = Child()
-    assert b.x == 1.
-    assert b.y == 2.
-    assert np.isnan(b.z)
+    assert b.x() == 1.
+    assert b.y() == 2.
+    assert np.isnan(b.z())
     b.z = 100.
-    assert b.z == 100.
+    assert b.z() == 100.
 
     b.update(z=40.)
-    assert b.z == 40.
+    assert b.z() == 40.
 
     b.update(z=dict(free=True))
     assert b._z.free
@@ -67,13 +67,13 @@ def test_model():
     print(dd)
     t_copy = test_class(**dd)
 
-    assert t_copy.var == t.var
+    assert t_copy.var() == t.var()
     assert t_copy.req == t.req
     assert t_copy.opt == t.opt    
 
     dd['var'] = 1.5
     t_copy.update(**dd)
-    assert t_copy.var == 1.5
+    assert t_copy.var() == 1.5
 
     try: t_copy.update(aa=15.)
     except KeyError: pass
@@ -93,13 +93,16 @@ def test_model():
     t.update(var=dict(errors=[0.1, 0.2, 0.3]))
     assert np.allclose(t._var.errors, [0.1, 0.2, 0.3])
     
-    test_val = t.req * t.opt * t.var
+    test_val = t.req * t.opt * t.var()
     check = t.der
     assert check==test_val
 
     t.req = 4.
     check = t.der
     assert check==8.
+
+    assert t.getp('opt').default == 1.0
+    assert t.getp('req').required
 
     try:
         t2 = test_class(var=2.)
@@ -221,7 +224,7 @@ def test_property_model():
     assert np.allclose(extract_vals(test_obj), extract_vals(test_copy))
     
     test_obj.update(px=3.3)
-    assert test_obj.px == 3.3
+    assert test_obj.px() == 3.3
 
     test_obj.update(px=[3.3, 3.4])
-    assert np.allclose(test_obj.px, [3.3, 3.4])
+    assert np.allclose(test_obj.px(), [3.3, 3.4])
