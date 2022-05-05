@@ -50,7 +50,7 @@ class Parameter(Property):
         value : ...
             The value being set
 
-        Rasies
+        Raises
         ------
         TypeError : The input value is the wrong type (i.e., not castable to Darray)
 
